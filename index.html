@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<!-- © 2026 ふえぞう（note: https://note.com/fuezou999）無断転載・改変禁止 -->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<title>漸化式 型えらび診断</title>
+<meta name="description" content="解かなくていい。どの型で解くかだけ えらぶ。漸化式の「どの型で解くか」を10問で診断します。">
+<style>
+:root {
+  --ink: #1d2433; --sub: #5d6676; --line: #e3e6ec; --bg: #f7f8fa; --card: #fff;
+  --accent: #2f5bd3; --ok: #1f8a4c; --ok-bg: #e8f6ee; --ng: #c8402f; --ng-bg: #fcecea;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font-family: -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; line-height: 1.7; }
+main { max-width: 520px; margin: 0 auto; padding: 20px 16px 32px; }
+[hidden] { display: none !important; }
+h1 { font-size: 26px; line-height: 1.35; margin: 28px 0 6px; letter-spacing: 0.02em; }
+.lead { color: var(--sub); margin: 0 0 22px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 0 0 14px; }
+.mode { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.mode b { display: block; font-size: 18px; }
+.mode span { color: var(--sub); font-size: 14px; }
+.mode:hover { border-color: var(--accent); }
+.how { font-size: 14px; color: var(--sub); }
+.how ol { margin: 6px 0 0; padding-left: 1.4em; }
+.foot { margin-top: 28px; font-size: 12px; color: var(--sub); text-align: center; }
+.foot a { color: var(--sub); }
+.bar { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--sub); margin-bottom: 8px; }
+.prog { height: 4px; background: var(--line); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+.prog i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.eq { font-family: 'Times New Roman', 'Hiragino Mincho ProN', serif; font-size: 22px; line-height: 1.9; text-align: center; padding: 22px 12px; }
+.eq .cond { display: block; font-size: 16px; color: var(--sub); }
+.eq .line { display: block; white-space: nowrap; }
+.m { font-family: 'Times New Roman', 'Hiragino Mincho ProN', serif; white-space: nowrap; }
+sub, sup { font-size: 0.68em; line-height: 0; }
+.frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; margin: 0 2px; }
+.frac > span:first-child { border-bottom: 1px solid currentColor; padding: 0 3px; }
+.frac > span:last-child { padding: 0 3px; }
+.q { font-weight: bold; margin: 4px 0 10px; }
+.opts { display: grid; gap: 10px; }
+.opt { font: inherit; font-size: 16px; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.opt:disabled { cursor: default; }
+.opt.ok { border-color: var(--ok); background: var(--ok-bg); }
+.opt.ng { border-color: var(--ng); background: var(--ng-bg); }
+.why { margin-top: 14px; border-left: 4px solid var(--ok); }
+.why.ng { border-left-color: var(--ng); }
+.why p { margin: 0 0 4px; }
+.why, .misses, .opt, .cta p { word-break: keep-all; overflow-wrap: anywhere; }   /* ことばの 途中で 改行しない（空白で 切る） */
+.why .head { font-weight: bold; }
+.btn { display: block; width: 100%; font: inherit; font-weight: bold; font-size: 16px; padding: 13px; border-radius: 10px; border: none; background: var(--accent); color: #fff; cursor: pointer; text-align: center; text-decoration: none; margin-top: 14px; }
+.btn.sub { background: var(--card); color: var(--accent); border: 1.5px solid var(--accent); }
+.btn.x { background: #111; }
+.score { text-align: center; padding: 22px 16px; }
+.score .big { font-size: 44px; font-weight: bold; line-height: 1.2; }
+.score .big small { font-size: 20px; color: var(--sub); }
+.misses { margin: 0; padding-left: 1.2em; }
+.misses li { margin-bottom: 6px; }
+.cta h2 { font-size: 16px; margin: 0 0 6px; }
+.cta p { margin: 0 0 4px; font-size: 15px; }
+.soon { display: inline-block; font-size: 12px; background: #fff4d6; color: #7a5a00; border-radius: 4px; padding: 1px 6px; margin-left: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <section id="titleScreen">
+    <h1>漸化式<br>型えらび診断</h1>
+    <p class="lead">解かなくていい。<br>どの 型で 解くか だけ えらぶ。</p>
+    <button class="card mode" id="basicBtn"><b>基本編（数B）10問</b><span>等差・等比・階差・特性方程式</span></button>
+    <button class="card mode" id="examBtn"><b>入試編 10問</b><span>逆数・対数・3項間・連立・Sₙ など</span></button>
+    <div class="card how">
+      <b>あそびかた</b>
+      <ol>
+        <li>漸化式が 1つ 出ます。</li>
+        <li>計算は しないで、「どの 型で 解くか（最初に 何を するか）」を 4つから えらびます。</li>
+        <li>10問 終わると、まよいやすい 型が わかります。</li>
+      </ol>
+    </div>
+    <p class="foot">© 2026 ふえぞう　無断転載・改変禁止<br><a href="https://note.com/fuezou999" target="_blank" rel="noopener">note：ふえぞう@さんすう・すうがくトレーナー</a></p>
+  </section>
+
+  <section id="quizScreen" hidden>
+    <div class="bar"><span id="modeName"></span><span id="count"></span></div>
+    <div class="prog"><i id="progBar"></i></div>
+    <div class="card eq" id="eq"></div>
+    <p class="q">どの 型で 解く？</p>
+    <div class="opts" id="opts"></div>
+    <div class="card why" id="why" hidden></div>
+    <button class="btn" id="nextBtn" hidden>次へ</button>
+  </section>
+
+  <section id="resultScreen" hidden>
+    <div class="card score">
+      <div id="resMode"></div>
+      <div class="big" id="resScore"></div>
+      <div id="resMsg"></div>
+    </div>
+    <div class="card" id="missCard"><b>まよった ところ</b><ul class="misses" id="missList"></ul></div>
+    <div class="card cta" id="cta"></div>
+    <a class="btn x" id="shareBtn" target="_blank" rel="noopener">結果を X に 投稿する</a>
+    <button class="btn sub" id="againBtn">もう一度（ちがう 問題）</button>
+    <button class="btn sub" id="otherBtn"></button>
+    <button class="btn sub" id="topBtn">はじめに もどる</button>
+    <p class="foot">© 2026 ふえぞう　無断転載・改変禁止<br><a href="https://note.com/fuezou999" target="_blank" rel="noopener">note：ふえぞう@さんすう・すうがくトレーナー</a></p>
+  </section>
+</main>
+
+<script id="core">
+// しくみ：問題・選択肢・判定・まとめ。式は「a_{n+1}」「q^{n}」「\frac{A}{B}」の 書き方で 作り、画面で HTML に する
+const ShindanCore = (() => {
+  const MINUS = '−';
+  const num = x => (x < 0 ? MINUS + (-x) : String(x));
+  const A = s => 'a_{' + s + '}', B = s => 'b_{' + s + '}';
+  // 係数 k と 文字 x の 項を つなぐ（0 は 書かない、1 は 省く）
+  function lin(terms) {
+    let out = '';
+    for (const [k, x] of terms) {
+      if (k === 0) continue;
+      const ak = Math.abs(k), body = x === '' ? String(ak) : (ak === 1 ? x : ak + x);
+      out += out === '' ? (k < 0 ? MINUS : '') + body : (k < 0 ? ' ' + MINUS + ' ' : ' ＋ ') + body;
+    }
+    return out;
+  }
+  const shift = (x, al) => (al > 0 ? x + ' ' + MINUS + ' ' + al : x + ' ＋ ' + (-al));   // x − α
+
+  // 型（基本の 4つは ドリルと おなじ「〜の 形」）と、入試の 型の 最初の 一手
+  const MOVES = {
+    tousa: '等差の 形（a_{n+1} − a_{n} ＝ d）',
+    touhi: '等比の 形（a_{n+1} ＝ ra_{n}）',
+    kaisa: '階差の 形（a_{n+1} − a_{n} ＝ f(n)）',
+    tokusei: '特性方程式を 使う 形（α ＝ pα ＋ q）',
+    gyakusu: '両辺の 逆数を とる',
+    taisu: '両辺の 対数を とる',
+    warinq: '両辺を q^{n+1} で 割る',
+    ichiji: 'n を 1つ ずらした 式と ひく',
+    sankou: 'x^{2} ＝ px ＋ q を 解く',
+    renritsu: 'a_{n} ＋ kb_{n} が 等比に なる k を さがす',
+    sn: 'a_{n+1} ＝ S_{n+1} − S_{n} を 使う',
+    nkeisu: 'a_{n}／n や na_{n} を ひとまとまりに みる',
+  };
+  const BASIC = ['tousa', 'touhi', 'kaisa', 'tokusei'];
+  const EXAM = ['gyakusu', 'taisu', 'warinq', 'ichiji', 'sankou', 'renritsu', 'sn', 'nkeisu'];
+  // 入試編の はずれ（まちがえやすい 一手）。ほかの 解き方でも 通る 一手は 入れない（特性方程式 の 問題に「ずらして ひく」など）
+  const CONFUSE = {
+    tokusei: ['warinq', 'gyakusu', 'kaisa'], kaisa: ['tousa', 'tokusei', 'touhi'],
+    gyakusu: ['tokusei', 'taisu', 'kaisa'], taisu: ['touhi', 'gyakusu', 'tokusei'],
+    warinq: ['tokusei', 'kaisa', 'touhi'], ichiji: ['tokusei', 'kaisa', 'warinq'],
+    sankou: ['tokusei', 'renritsu', 'kaisa'], renritsu: ['sankou', 'tokusei', 'touhi'],
+    sn: ['kaisa', 'tousa', 'tokusei'], nkeisu: ['touhi', 'kaisa', 'tousa'],
+  };
+  // 結果で 使う 型の 名前
+  const SHAPE = {
+    tousa: '＋ 定数（a_{n} の 係数 1）', touhi: '定数倍 だけ', kaisa: '＋（n の 式）（a_{n} の 係数 1）',
+    tokusei: 'a_{n+1} ＝ pa_{n} ＋ q', gyakusu: '分数の 形', taisu: '累乗の 形', warinq: '＋ q^{n} の 形',
+    ichiji: '＋（n の 1次式）の 形', sankou: '3項間', renritsu: '連立', sn: 'S_{n} と a_{n} の 関係', nkeisu: '係数に n',
+  };
+
+  // 問題（数は 暗算できる ものだけ）
+  const POOL = {
+    tousa: [{ a1: 2, d: 3 }, { a1: 5, d: -2 }, { a1: 1, d: 4 }],
+    touhi: [{ a1: 3, r: 2 }, { a1: 1, r: -3 }, { a1: 2, r: 3 }],
+    kaisa: [{ a1: 1, f: 'lin', b: 2, c: 0 }, { a1: 2, f: 'lin', b: 3, c: -1 }, { a1: 1, f: 'pow', q: 2 }, { a1: 3, f: 'lin', b: 1, c: 1 }],
+    tokusei: [{ a1: 1, p: 2, q: 3 }, { a1: 4, p: 3, q: -4 }, { a1: 2, p: 4, q: -3 }, { a1: 1, p: -2, q: 6 }],
+    gyakusu: [{ a1: 1, p: 1, q: 1 }, { a1: 1, p: 2, q: 1 }, { a1: 1, p: 3, q: 2 }],
+    taisu: [{ a1: 2, c: 1, k: 2 }, { a1: 1, c: 2, k: 2 }, { a1: 3, c: 3, k: 2 }],
+    warinq: [{ a1: 1, p: 2, q: 3 }, { a1: 2, p: 3, q: 2 }, { a1: 1, p: 3, q: 3 }],
+    ichiji: [{ a1: 1, p: 2, b: 1, c: 0 }, { a1: 2, p: 3, b: 2, c: -1 }, { a1: 2, p: 2, b: -1, c: 1 }],
+    sankou: [{ a1: 1, a2: 4, s: 5, t: -6 }, { a1: 0, a2: 1, s: 3, t: -2 }, { a1: 1, a2: 5, s: 1, t: 2 }, { a1: 1, a2: 4, s: 4, t: -4 }],
+    renritsu: [{ a1: 1, b1: 1, p: 1, q: 2, r: 2, s: 1 }, { a1: 2, b1: 1, p: 3, q: 1, r: 1, s: 3 }, { a1: 1, b1: 0, p: 2, q: 1, r: 1, s: 2 }],
+    sn: [{ u: 2, v: 0, w: -1 }, { u: 2, v: -1, w: 0 }, { u: 3, v: 0, w: -2 }],
+    nkeisu: [{ a1: 2, form: 'A' }, { a1: 1, form: 'B' }, { a1: 1, form: 'C' }],
+  };
+
+  // 式（lines）と 初めの 条件（cond）
+  function view(type, m) {
+    const n1 = A('n+1') + ' ＝ ', a1 = A('1') + ' ＝ ' + num(m.a1);
+    switch (type) {
+      case 'tousa': return { lines: [n1 + lin([[1, A('n')], [m.d, '']])], cond: a1 };
+      case 'touhi': return { lines: [n1 + lin([[m.r, A('n')]])], cond: a1 };
+      case 'kaisa': return { lines: [n1 + lin(m.f === 'pow' ? [[1, A('n')], [1, m.q + '^{n}']] : [[1, A('n')], [m.b, 'n'], [m.c, '']])], cond: a1 };
+      case 'tokusei': return { lines: [n1 + lin([[m.p, A('n')], [m.q, '']])], cond: a1 };
+      case 'gyakusu': return { lines: [n1 + '\\frac{' + A('n') + '}{' + lin([[m.p, A('n')], [m.q, '']]) + '}'], cond: a1 };
+      case 'taisu': return { lines: [n1 + lin([[m.c, A('n') + '^{' + m.k + '}']])], cond: a1 };
+      case 'warinq': return { lines: [n1 + lin([[m.p, A('n')], [1, m.q + '^{n}']])], cond: a1 };
+      case 'ichiji': return { lines: [n1 + lin([[m.p, A('n')], [m.b, 'n'], [m.c, '']])], cond: a1 };
+      case 'sankou': return { lines: [A('n+2') + ' ＝ ' + lin([[m.s, A('n+1')], [m.t, A('n')]])], cond: a1 + '、' + A('2') + ' ＝ ' + num(m.a2) };
+      case 'renritsu': return { lines: [n1 + lin([[m.p, A('n')], [m.q, B('n')]]), B('n+1') + ' ＝ ' + lin([[m.r, A('n')], [m.s, B('n')]])], cond: a1 + '、' + B('1') + ' ＝ ' + num(m.b1) };
+      case 'sn': return { lines: ['S_{n} ＝ ' + lin([[m.u, A('n')], [m.v, 'n'], [m.w, '']])], cond: 'S_{n} ＝ ' + A('1') + ' ＋ ' + A('2') + ' ＋ … ＋ ' + A('n') };
+      case 'nkeisu': return { lines: [{ A: 'n' + A('n+1') + ' ＝ (n ＋ 1)' + A('n'), B: '(n ＋ 1)' + A('n+1') + ' ＝ n' + A('n'), C: 'n' + A('n+1') + ' ＝ 2(n ＋ 1)' + A('n') }[m.form]], cond: a1 };
+    }
+  }
+  // 理由：見分ける 目じるし と、一手の あと
+  function reason(type, m) {
+    switch (type) {
+      case 'tousa': return ['a_{n} に たす 数が いつも ' + num(m.d) + ' → 等差数列', 'a_{n} ＝ a_{1} ＋ (n − 1)d'];
+      case 'touhi': return ['a_{n} を ' + num(m.r) + ' 倍 する だけ → 等比数列', 'a_{n} ＝ a_{1}r^{n−1}'];
+      case 'kaisa': return ['a_{n} の 係数が 1 で、たす 部分（' + (m.f === 'pow' ? m.q + '^{n}' : lin([[m.b, 'n'], [m.c, '']])) + '）が n で 変わる → 階差数列', 'n ≧ 2 で a_{n} ＝ a_{1} ＋（たす 部分の 和）'];
+      case 'tokusei': {
+        const al = m.q / (1 - m.p);
+        return ['a_{n} の 係数が ' + num(m.p) + '（1 では ない）で、たす 部分が 定数 → 特性方程式',
+          'α ＝ ' + lin([[m.p, 'α'], [m.q, '']]) + ' から α ＝ ' + num(al) + '。' + shift(A('n+1'), al) + ' ＝ ' + num(m.p) + '(' + shift(A('n'), al) + ') で 等比'];
+      }
+      case 'gyakusu': return ['右辺が a_{n} ／（a_{n} の 1次式）の 分数 → 逆数', '\\frac{1}{a_{n}} ＝ b_{n} と おくと b_{n+1} ＝ ' + lin([[m.q, 'b_{n}'], [m.p, '']]) + (m.q === 1 ? '（等差）' : '（特性方程式の 形）')];
+      case 'taisu': return ['a_{n}^{' + m.k + '}（累乗）が ある → 対数', 'log a_{n} ＝ b_{n} と おくと b_{n+1} ＝ ' + (m.c === 1 ? m.k + 'b_{n}（等比）' : m.k + 'b_{n} ＋ log ' + m.c + '（特性方程式の 形）')];
+      case 'warinq': return ['たす 部分が ' + m.q + '^{n}（n が 指数に ある）→ ' + m.q + '^{n+1} で 割る', '\\frac{a_{n}}{' + m.q + '^{n}} ＝ b_{n} と おくと 特性方程式（か 階差）の 形'];
+      case 'ichiji': return ['a_{n} の 係数が ' + num(m.p) + '（1 では ない）で、たす 部分が n の 1次式 → ずらして ひく', 'a_{n+2} の 式から ひくと、階差 a_{n+1} − a_{n} が 特性方程式の 形'];
+      case 'sankou': return ['a_{n+2}、a_{n+1}、a_{n} の 3つの 項の 関係 → 3項間の 特性方程式', 'x^{2} ＝ ' + lin([[m.s, 'x'], [m.t, '']]) + ' の 解 α、β で a_{n+2} − αa_{n+1} ＝ β(a_{n+1} − αa_{n})'];
+      case 'renritsu': return ['2つの 数列 a_{n} と b_{n} が からみ合って いる → 連立', 'a_{n} ＋ kb_{n} が 等比に なる k を えらぶ（ふつう 2つ）'];
+      case 'sn': return ['和 S_{n} と a_{n} の 関係 → n を 1つ ずらして ひく', 'S_{n+1} − S_{n} ＝ a_{n+1} で a_{n+1} と a_{n} の 漸化式に なる'];
+      case 'nkeisu': return ['a_{n} の 係数に n が ついて いる → n ごと まとめる', (m.form === 'B' ? 'na_{n}' : 'a_{n}／n') + ' を ひとまとまりに みると ' + (m.form === 'C' ? '等比' : '一定')];
+    }
+  }
+
+  function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const shuffle = (rng, xs) => { const a = xs.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pickN = (rng, xs, n) => shuffle(rng, xs).slice(0, n);
+
+  function build(type, m, mode, rng) {
+    const moves = mode === 'basic' ? BASIC : [type].concat(CONFUSE[type]);
+    return {
+      type, prm: m, view: view(type, m), reason: reason(type, m),
+      options: shuffle(rng, moves).map(k => ({ move: k, label: MOVES[k], correct: k === type })),
+    };
+  }
+  // 基本編：等差2・等比2・階差3・特性方程式3。入試編：入試の 8つ ＋ 特性方程式 ＋ 階差
+  function makeQuiz(mode, rng) {
+    const plan = mode === 'basic'
+      ? [['tousa', 2], ['touhi', 2], ['kaisa', 3], ['tokusei', 3]]
+      : EXAM.map(t => [t, 1]).concat([['tokusei', 1], ['kaisa', 1]]);
+    const qs = [];
+    for (const [t, n] of plan) for (const m of pickN(rng, POOL[t], n)) qs.push(build(t, m, mode, rng));
+    return shuffle(rng, qs);
+  }
+  // まとめ：正解数、まよった ところ、案内（基本の 型で まよった か）
+  function summarize(mode, qs, picks) {
+    const misses = [];
+    qs.forEach((q, i) => { if (picks[i] !== q.type) misses.push({ type: q.type, chosen: picks[i] }); });
+    return { mode, score: qs.length - misses.length, total: qs.length, misses,
+      basicMiss: misses.some(x => BASIC.includes(x.type)), examMiss: misses.some(x => EXAM.includes(x.type)) };
+  }
+  return { MOVES, BASIC, EXAM, CONFUSE, SHAPE, POOL, view, reason, build, makeQuiz, summarize, mulberry32, lin, num };
+})();
+</script>
+
+<script>
+const C = ShindanCore;
+const URLS = {
+  app: 'https://fuezou.github.io/zenkashiki-shindan/',
+  drill: 'https://note.com/fuezou999/n/n39ccf985f5c2',
+  tokusei: 'https://note.com/fuezou999/n/n61a77497f84d',
+  note: 'https://note.com/fuezou999',
+};
+const MODE_NAME = { basic: '基本編（数B）', exam: '入試編' };
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// 「a_{n+1}」「q^{n}」「\frac{A}{B}」を HTML に
+function tex(s) {
+  let h = esc(s);
+  for (let i = 0; i < 3 && h.includes('\\frac{'); i++) h = h.replace(/\\frac\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g, '<span class="frac"><span>$1</span><span>$2</span></span>');
+  return h.replace(/_\{([^}]*)\}/g, '<sub>$1</sub>').replace(/\^\{([^}]*)\}/g, '<sup>$1</sup>');
+}
+// 文の 中の 式：「＝」「＋」「−」の まわりでは 改行しない
+const mixed = s => tex(s.replace(/ ([＝＋−→]) /g, '\u00a0$1\u00a0'));
+
+const state = { mode: null, qs: [], i: 0, picks: [], answered: false };
+const rng = C.mulberry32((Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0);
+
+function show(id) { ['titleScreen', 'quizScreen', 'resultScreen'].forEach(s => { $(s).hidden = s !== id; }); window.scrollTo(0, 0); }
+
+function start(mode) {
+  Object.assign(state, { mode, qs: C.makeQuiz(mode, rng), i: 0, picks: [], answered: false });
+  show('quizScreen');
+  render();
+}
+function render() {
+  const q = state.qs[state.i];
+  state.answered = false;
+  $('modeName').textContent = MODE_NAME[state.mode];
+  $('count').textContent = (state.i + 1) + ' / ' + state.qs.length;
+  $('progBar').style.width = (state.i / state.qs.length * 100) + '%';
+  $('eq').innerHTML = q.view.lines.map(l => '<span class="line">' + tex(l) + '</span>').join('') + '<span class="cond">' + tex(q.view.cond) + '</span>';
+  $('opts').innerHTML = '';
+  q.options.forEach((o, k) => {
+    const b = document.createElement('button');
+    b.className = 'opt'; b.innerHTML = mixed(o.label); b.dataset.k = k;
+    b.addEventListener('click', () => answer(k));
+    $('opts').appendChild(b);
+  });
+  $('why').hidden = true; $('nextBtn').hidden = true;
+}
+function answer(k) {
+  if (state.answered) return;
+  state.answered = true;
+  const q = state.qs[state.i], o = q.options[k];
+  state.picks.push(o.move);
+  [...$('opts').children].forEach((b, j) => {
+    b.disabled = true;
+    if (q.options[j].correct) b.classList.add('ok');
+    else if (j === k) b.classList.add('ng');
+  });
+  const why = $('why');
+  why.className = 'card why' + (o.correct ? '' : ' ng');
+  why.innerHTML = '<p class="head">' + (o.correct ? '○ 正解' : '× ざんねん。正解は「' + mixed(C.MOVES[q.type]) + '」') + '</p>' +
+    q.reason.map(l => '<p>' + mixed(l) + '</p>').join('');
+  why.hidden = false;
+  $('nextBtn').textContent = state.i + 1 < state.qs.length ? '次へ' : '結果を 見る';
+  $('nextBtn').hidden = false;
+  $('progBar').style.width = ((state.i + 1) / state.qs.length * 100) + '%';
+}
+function next() {
+  if (!state.answered) return;
+  if (++state.i < state.qs.length) render(); else result();
+}
+
+function result() {
+  const r = C.summarize(state.mode, state.qs, state.picks), other = state.mode === 'basic' ? 'exam' : 'basic';
+  $('resMode').textContent = MODE_NAME[r.mode];
+  $('resScore').innerHTML = r.score + '<small> / ' + r.total + '</small>';
+  $('resMsg').textContent = r.score === r.total ? '全問 正解！ 型の 見分けは ばっちり。' : r.score >= 7 ? 'あと 少し。まよった 型を たしかめよう。' : '見分けの 練習が 効く ところです。';
+  $('missCard').hidden = !r.misses.length;
+  $('missList').innerHTML = r.misses.map(x => '<li>「' + mixed(C.SHAPE[x.type]) + '」の 問題で、「' + mixed(C.MOVES[x.chosen]) + '」を えらんだ<br>→ 正しくは「' + mixed(C.MOVES[x.type]) + '」</li>').join('');
+  $('cta').innerHTML = ctaHTML(r);
+  const text = '漸化式 型えらび診断【' + MODE_NAME[r.mode] + '】' + r.score + '/' + r.total + ' でした';
+  $('shareBtn').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(URLS.app) + '&hashtags=' + encodeURIComponent('漸化式,高校数学');
+  $('otherBtn').textContent = MODE_NAME[other] + ' に 挑戦';
+  $('otherBtn').onclick = () => start(other);
+  show('resultScreen');
+}
+// 案内：基本の 型で まよった → ドリル。入試の 型で まよった → 準備中 ＋ まず 基本の 見分け
+function ctaHTML(r) {
+  const drill = '<a class="btn" href="' + URLS.drill + '" target="_blank" rel="noopener">漸化式ドリル60問（note）</a>';
+  const link = (u, t) => '<a class="btn sub" href="' + u + '" target="_blank" rel="noopener">' + t + '</a>';
+  if (r.mode === 'basic') {
+    return r.misses.length
+      ? '<h2>この 見分けを 練習するなら</h2><p>型ごとの 前編40問は 無料。シャッフルした 後編20問で「どれを 使うか」を 自分で 決める 練習が できます。</p>' + drill
+      : '<h2>入試編にも 挑戦</h2><p>基本の 4つが 見分けられたら、逆数・対数・3項間・連立 へ。</p><p>型を 確実に するなら こちら：</p>' + drill;
+  }
+  let h = '<h2>入試の 型の ドリル<span class="soon">準備中</span></h2><p>入試の 型も、ほとんどは「おきかえて 特性方程式」に もちこみます。まずは 基本の 見分けを 確実に。</p>';
+  if (r.basicMiss || r.examMiss) h += drill;
+  return h + link(URLS.tokusei, '特性方程式の「なぜ」を 図で（無料記事）');
+}
+
+$('basicBtn').addEventListener('click', () => start('basic'));
+$('examBtn').addEventListener('click', () => start('exam'));
+$('nextBtn').addEventListener('click', next);
+$('againBtn').addEventListener('click', () => start(state.mode));
+$('topBtn').addEventListener('click', () => show('titleScreen'));
+</script>
+</body>
+</html>
