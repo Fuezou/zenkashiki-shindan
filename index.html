@@ -150,6 +150,13 @@ const ShindanCore = (() => {
     sankou: ['tokusei', 'renritsu', 'kaisa'], renritsu: ['sankou', 'tokusei', 'touhi'],
     sn: ['kaisa', 'tousa', 'tokusei'], nkeisu: ['touhi', 'kaisa', 'tousa'],
   };
+  // 遠回り だけど 解ける 一手：× の まま、ひとこと 添える
+  const NOTE = {
+    'tousa>kaisa': '階差の 形でも 解けるけど、たす 数が 一定なら 等差が いちばん 早い',
+    'touhi>tokusei': '特性方程式の 形（q ＝ 0）とも 見られるけど、何倍か する だけなら 等比が いちばん 早い',
+    'renritsu>sankou': 'b_{n} を 消すと 3項間に なって 解けるけど、a_{n} ＋ kb_{n} で まとめる ほうが 早い',
+  };
+  const noteFor = (type, chosen) => NOTE[type + '>' + chosen] || '';
   // 結果で 使う 型の 名前
   const SHAPE = {
     tousa: '＋ 定数（a_{n} の 係数 1）', touhi: '定数倍 だけ', kaisa: '＋（n の 式）（a_{n} の 係数 1）',
@@ -240,7 +247,7 @@ const ShindanCore = (() => {
     return { mode, score: qs.length - misses.length, total: qs.length, misses,
       basicMiss: misses.some(x => BASIC.includes(x.type)), examMiss: misses.some(x => EXAM.includes(x.type)) };
   }
-  return { MOVES, BASIC, EXAM, CONFUSE, SHAPE, POOL, view, reason, build, makeQuiz, summarize, mulberry32, lin, num };
+  return { MOVES, BASIC, EXAM, CONFUSE, SHAPE, POOL, NOTE, noteFor, view, reason, build, makeQuiz, summarize, mulberry32, lin, num };
 })();
 </script>
 
@@ -303,6 +310,7 @@ function answer(k) {
   const why = $('why');
   why.className = 'card why' + (o.correct ? '' : ' ng');
   why.innerHTML = '<p class="head">' + (o.correct ? '○ 正解' : '× ざんねん。正解は「' + mixed(C.MOVES[q.type]) + '」') + '</p>' +
+    (o.correct || !C.noteFor(q.type, o.move) ? '' : '<p>※ ' + mixed(C.noteFor(q.type, o.move)) + '</p>') +
     q.reason.map(l => '<p>' + mixed(l) + '</p>').join('');
   why.hidden = false;
   $('nextBtn').textContent = state.i + 1 < state.qs.length ? '次へ' : '結果を 見る';
