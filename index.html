@@ -47,7 +47,8 @@ sub, sup { font-size: 0.68em; line-height: 0; }
 .frac > span:first-child { border-bottom: 1px solid currentColor; padding: 0 3px; }
 .frac > span:last-child { padding: 0 3px; }
 .q { font-weight: bold; margin: 4px 0 10px; }
-.opts { display: grid; gap: 10px; }
+.opts { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }   /* 長い 式に 押し広げられない */
+.opt { min-width: 0; }
 .opt { font: inherit; font-size: 16px; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
 .opt:disabled { cursor: default; }
 .opt.ok { border-color: var(--ok); background: var(--ok-bg); }
@@ -288,6 +289,82 @@ function start(mode) {
   show('quizScreen');
   render();
 }
+// 2026-10-25：式の かたまりを 改行しない 箱に 入れる（三角比クエストなどと 同じ しくみ）
+function keepMath(root, noFit) {
+  // 問題文は「演算子の となりで ない 空白」と 改行の ところ だけで 折る。式の かたまり（y ＝ (2 ＋ √3)x、tan(β − α) ＝ ？ など）は
+  // √ や 分数を ふくめて 1つの 改行しない 箱（.nwm）に 入れる。1行に 入らない 長い 式だけ、＝・不等号の 前で 分けて よい
+  if (!root) return;
+  if (root.querySelector('.nwm')) { if (!noFit) fitRuns(root); return; }
+  const OPS = '＝＋−×÷＜＞≦≧±', out = [];
+  let run = null, prev = '';
+  const newRun = () => { const s = document.createElement('span'); s.className = 'nwm'; s.style.whiteSpace = 'nowrap'; return s; };
+  const add = node => { if (!run) run = newRun(); run.appendChild(node); };
+  const flush = () => { if (run) out.push(run); run = null; };
+  const kids = [...root.childNodes];
+  kids.forEach((k, ki) => {
+    if (k.nodeType === 3) {
+      const t = k.textContent; let buf = '';
+      for (let i = 0; i < t.length; i++) {
+        const ch = t[i];
+        if (ch === ' ' || ch === '　' || ch === '\n') {
+          let nx = t.slice(i + 1).replace(/^[ 　]+/, '')[0];
+          if (nx === undefined) { const nk = kids[ki + 1]; nx = nk ? (nk.nodeType === 3 ? (nk.textContent.trim()[0] || '') : 'x') : ''; }
+          const before = buf ? buf[buf.length - 1] : prev;
+          if (ch === '\n' || !(OPS.includes(before) || OPS.includes(nx))) { if (buf) add(document.createTextNode(buf)); buf = ''; flush(); out.push(document.createTextNode(ch)); prev = ''; continue; }
+        }
+        buf += ch;
+      }
+      if (buf) { add(document.createTextNode(buf)); prev = buf[buf.length - 1]; }
+    } else if (k.nodeName === 'BR' || k.nodeName === 'TABLE' || k.nodeName === 'DIV') { flush(); out.push(k); prev = ''; }   // 表などは そのまま
+    else { add(k); prev = 'x'; }
+  });
+  flush();
+  root.replaceChildren(...out);
+  if (!noFit) fitRuns(root);
+}
+function fitRuns(root) {   // 図の 幅が 決まって から 測る（まだ 見えない ときは 何も しない）
+  const newRun = () => { const s = document.createElement('span'); s.className = 'nwm'; s.style.whiteSpace = 'nowrap'; return s; };
+  const cs = getComputedStyle(root), W = root.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);   // 中身の 幅
+  if (W < 40) return;
+  root.querySelectorAll('.nwm[data-wrap]').forEach(sp => { sp.style.whiteSpace = 'nowrap'; sp.removeAttribute('data-wrap'); });   // 前に 折った ものは 測り直す
+  let split = false;
+  root.querySelectorAll('.nwm').forEach(sp => {
+    if (sp.offsetWidth <= W) return;
+    {   // 長い 式は「，」の あとと ＝・不等号の 前で 分ける（√ や 分数は 分けない）
+      const cut = re => { const pieces = [[]];
+        [...sp.childNodes].forEach(c => {
+          if (c.nodeType !== 3) { pieces[pieces.length - 1].push(c); return; }
+          c.textContent.split(re).forEach((x, i) => { if (i) pieces.push([]); if (x) pieces[pieces.length - 1].push(document.createTextNode(x)); });
+        });
+        return pieces.filter(p => p.length); };
+      let sep = '\u200b', ps = cut(/(?<=[，．、。])/);   // まず「，」「．」の あと、なければ ＝・不等号の 前
+      if (ps.length < 2) { sep = ' '; ps = cut(/[ \u00a0](?=[＝＜＞≦≧][ \u00a0])/); }
+      if (ps.length < 2) { sep = '\u200b'; ps = cut(/(?<=\))(?=\()/); }   // それでも なければ かっこの 積の あいだ
+      if (ps.length > 1) {
+        const f = document.createDocumentFragment();
+        ps.forEach((p, i) => { if (i && sep) f.appendChild(document.createTextNode(sep)); const b = newRun(); p.forEach(n => b.appendChild(n)); f.appendChild(b); });   // ＝ の 前は 空白、ほかは 見えない 区切り（そこで 改行できる）
+        sp.replaceWith(f); split = true; return;
+      }
+    }
+    sp.style.whiteSpace = 'normal'; sp.dataset.wrap = '1';   // それでも 入らない ときだけ ふつうに 折る
+  });
+  if (split) { fitRuns(root); return; }   // 分けた 箱も 測り直す
+  root.querySelectorAll('.nw').forEach(nw => { if (nw.style.whiteSpace === 'normal') keepMath(nw); });
+}
+
+// 選択肢・説明の 式は 途中で 改行しない（文字が 大きい 設定でも）。選択肢は 入らなければ 文字を 小さく（9px まで）
+function keepMathAll() {
+  [...$('opts').children].forEach(b => {
+    b.style.fontSize = ''; keepMath(b, true);
+    let f = parseFloat(getComputedStyle(b).fontSize);
+    const cs = getComputedStyle(b), inner = () => b.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const wide = () => b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll('.nwm')].some(sp => sp.offsetWidth > inner());   // 中身の 幅で 測る
+    while (wide() && f > 9) { f -= 1; b.style.fontSize = f + 'px'; }
+    fitRuns(b);
+  });
+  if (!$('why').hidden) $('why').querySelectorAll('p').forEach(p => keepMath(p));
+}
+window.addEventListener('resize', () => { if (!$('quizScreen').hidden) keepMathAll(); });
 function render() {
   const q = state.qs[state.i];
   state.answered = false;
@@ -303,6 +380,7 @@ function render() {
     $('opts').appendChild(b);
   });
   $('why').hidden = true; $('nextBtn').hidden = true;
+  keepMathAll();
 }
 function answer(k) {
   if (state.answered) return;
@@ -320,6 +398,7 @@ function answer(k) {
     (o.correct || !C.noteFor(q.type, o.move) ? '' : '<p>※ ' + mixed(C.noteFor(q.type, o.move)) + '</p>') +
     q.reason.map(l => '<p>' + mixed(l) + '</p>').join('');
   why.hidden = false;
+  keepMathAll();
   $('nextBtn').textContent = state.i + 1 < state.qs.length ? '次へ' : '結果を 見る';
   $('nextBtn').hidden = false;
   $('progBar').style.width = ((state.i + 1) / state.qs.length * 100) + '%';
